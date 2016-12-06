@@ -30,15 +30,20 @@ fn scan_identifier(first: char, chars: &mut std::str::Chars) {
     chars.nth(identifier.chars().count() - 2);
 }
 
-fn scan_string(chars: &mut std::str::Chars) {
+fn scan_string(delimiter: char, chars: &mut std::str::Chars) {
+    // TODO: invalid newlines
+    // TODO: escape sequences
     let mut string = String::new();
     while let Some(c) = chars.next() {
         match c {
-            '\'' => { println!("'{}'", string); return; },
+            '\''|'"' if c == delimiter => {
+                println!("{0}{1}{0}", delimiter, string);
+                return;
+            },
             _ => string.push(c),
         }
     }
-    println!("unterminated string! '{}", string);
+    println!("unterminated string! {}{}", delimiter, string);
 }
 
 fn scan(src: &str) {
@@ -48,7 +53,8 @@ fn scan(src: &str) {
             '(' => println!("("),
             ')' => println!(")"),
             ';' => println!(";"),
-            '\'' => scan_string(&mut chars),
+            '\'' => scan_string('\'', &mut chars),
+            '"' => scan_string('"', &mut chars),
             'a'...'z'|'A'...'Z' => scan_identifier(c, &mut chars),
             _ => { println!("illegal character: {}", c); std::process::exit(1); },
         }
