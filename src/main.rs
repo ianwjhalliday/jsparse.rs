@@ -1,6 +1,7 @@
+#[derive(Debug)]
 enum Token {
-    Identifier,
-    StringLiteral,
+    Identifier(String),
+    StringLiteral(String),
     LeftParenthesis,
     RightParenthesis,
     Semicolon,
@@ -14,7 +15,7 @@ mod ast {
     }
 }
 
-fn scan_identifier(first: char, chars: &mut std::str::Chars) {
+fn scan_identifier(first: char, chars: &mut std::str::Chars) -> Token {
     let mut identifier = String::new();
     identifier.push(first);
 
@@ -26,43 +27,45 @@ fn scan_identifier(first: char, chars: &mut std::str::Chars) {
             _ => break,
         }
     }
-    println!("{}", identifier);
     chars.nth(identifier.chars().count() - 2);
+    Token::Identifier(identifier)
 }
 
-fn scan_string(delimiter: char, chars: &mut std::str::Chars) {
+fn scan_string(delimiter: char, chars: &mut std::str::Chars) -> Token {
     // TODO: invalid newlines
     // TODO: escape sequences
     let mut string = String::new();
     while let Some(c) = chars.next() {
         match c {
-            '\''|'"' if c == delimiter => {
-                println!("{0}{1}{0}", delimiter, string);
-                return;
-            },
+            '\''|'"' if c == delimiter => return Token::StringLiteral(string),
             _ => string.push(c),
         }
     }
-    println!("unterminated string! {}{}", delimiter, string);
+    println!("Error: unterminated string: {}{}", delimiter, string);
+    std::process::exit(1);
 }
 
-fn scan(src: &str) {
+fn scan(src: &str) -> Vec<Token> {
     let mut chars = src.chars();
+    let mut tokens = Vec::new();
     while let Some(c) = chars.next() {
-        match c {
-            '(' => println!("("),
-            ')' => println!(")"),
-            ';' => println!(";"),
-            '\'' => scan_string('\'', &mut chars),
-            '"' => scan_string('"', &mut chars),
+        tokens.push(match c {
+            '(' => Token::LeftParenthesis,
+            ')' => Token::RightParenthesis,
+            ';' => Token::Semicolon,
+            '"'|'\'' => scan_string(c, &mut chars),
             'a'...'z'|'A'...'Z' => scan_identifier(c, &mut chars),
-            _ => { println!("illegal character: {}", c); std::process::exit(1); },
-        }
+            _ => {
+                println!("Error: illegal character: '{}'", c);
+                std::process::exit(1);
+            }
+        });
     }
+    tokens
 }
 
 fn main() {
     let input = "print('Hello, world!');";
-    println!("Input:\n\n{}\n\nTokens:\n", input);
-    scan(input);
+    let tokens = scan(input);
+    println!("Input:\n\n{}\n\nTokens:\n\n{:?}", input, tokens);
 }
