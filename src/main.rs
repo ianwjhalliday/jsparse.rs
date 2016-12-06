@@ -49,7 +49,8 @@ fn scan(src: &str) {
             ')' => println!(")"),
             ';' => println!(";"),
             '\'' => scan_string(&mut chars),
-            _ => scan_identifier(c, &mut chars),
+            'a'...'z'|'A'...'Z' => scan_identifier(c, &mut chars),
+            _ => { println!("illegal character: {}", c); std::process::exit(1); },
         }
     }
 }
