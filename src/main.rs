@@ -8,10 +8,11 @@ enum Token {
 }
 
 mod ast {
-    enum Node {
-        Identifier,
-        StringLiteral,
-        CallExpression,
+    #[derive(Debug)]
+    pub enum Node {
+        IdentifierReference(String),
+        StringLiteral(String),
+        CallExpression { target: Box<Node>, arguments: Box<Node> },
     }
 }
 
@@ -64,8 +65,75 @@ fn scan(src: &str) -> Vec<Token> {
     tokens
 }
 
+macro_rules! expect_punctuation(
+    ($p:pat, $e:expr) => (
+        match $e {
+            Some(&$p) => (),
+            Some(t) => {
+                //println!("Error: expected '{:?}' but got '{:?}' instead", $p, t);
+                println!("Error: expected '<nyi>' but got '{:?}' instead", t);
+                std::process::exit(1);
+            },
+            None => {
+                //println!("Error: expected '{:?}' but reached end of file instead", $p);
+                println!("Error: expected '<nyi>' but reached end of file instead");
+                std::process::exit(1);
+            }
+        }
+    )
+);
+
+fn parse_argument_list(tokens: &mut std::slice::Iter<Token>) -> ast::Node {
+    expect_punctuation!(Token::LeftParenthesis, tokens.next());
+    let ast = match tokens.next() {
+        Some(&Token::StringLiteral(ref string)) => {
+            ast::Node::StringLiteral(string.clone())
+        },
+        Some(t) => {
+            println!("Error: expected 'Token::String' but got '{:?}' instead", t);
+            std::process::exit(1);
+        }
+        None => {
+            println!("Error: expected 'Token::String' but reached end of file instead");
+            std::process::exit(1);
+        }
+    };
+    expect_punctuation!(Token::RightParenthesis, tokens.next());
+    ast
+}
+
+fn parse_call_expression(mut tokens: &mut std::slice::Iter<Token>) -> ast::Node {
+    match tokens.next() {
+        Some(&Token::Identifier(ref identifier)) => {
+            ast::Node::CallExpression {
+                target: Box::new(ast::Node::IdentifierReference(identifier.clone())),
+                arguments: Box::new(parse_argument_list(&mut tokens)),
+            }
+        },
+        Some(t) => {
+            println!("Error: expected 'Token::Identifier' but got '{:?}' instead", t);
+            std::process::exit(1);
+        },
+        None => {
+            println!("Error: expected 'Token::Identifier' but reached end of file instead");
+            std::process::exit(1);
+        }
+    }
+}
+
+fn parse(tokens: &Vec<Token>) -> ast::Node {
+    // TODO: Obviously this is incorrect, but is enough to get hello world example working
+    let mut tokens = tokens.iter();
+    let ast = parse_call_expression(&mut tokens);
+    expect_punctuation!(Token::Semicolon, tokens.next());
+    ast
+}
+
 fn main() {
     let input = "print('Hello, world!');";
     let tokens = scan(input);
-    println!("Input:\n\n{}\n\nTokens:\n\n{:?}", input, tokens);
+    let ast = parse(&tokens);
+    println!("Input:\n\n\t{}\n\n", input);
+    println!("Tokens:\n\n\t{:?}\n\n", tokens);
+    println!("Ast:\n\n\t{:?}\n", ast);
 }
